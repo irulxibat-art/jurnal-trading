@@ -9,6 +9,9 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.time.LocalDate;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 public class JournalPanel extends JPanel {
     private JTable openTable, closedTable;
@@ -30,7 +33,6 @@ public class JournalPanel extends JPanel {
     }
 
     private void initUI() {
-        // Panel filter
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         filterPanel.setOpaque(false);
         filterPanel.add(new JLabel("Search:"));
@@ -75,7 +77,8 @@ public class JournalPanel extends JPanel {
     }
 
     private JScrollPane createClosedTradesPanel() {
-        closedModel = new DefaultTableModel(new String[]{"ID", "Open Date", "Close Date", "Asset", "Type", "Entry", "Exit", "Lot", "P&L"}, 0);
+        // Kolom: ID, Open Date, Close Date, Duration, Asset, Type, Entry, Exit, Lot, P&L
+        closedModel = new DefaultTableModel(new String[]{"ID", "Open Date", "Close Date", "Duration", "Asset", "Type", "Entry", "Exit", "Lot", "P&L"}, 0);
         closedTable = new JTable(closedModel);
         closedTable.setRowHeight(28);
         closedTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -149,7 +152,6 @@ public class JournalPanel extends JPanel {
             assetCondition = " AND aset = '" + selectedAsset + "'";
         }
 
-        // Open trades
         openModel.setRowCount(0);
         String sqlOpen = "SELECT id, tanggal_buka, aset, tipe, entry_price, lot_size, stop_loss, take_profit FROM trades WHERE status = 'OPEN'" + assetCondition;
         try (Connection conn = DatabaseHelper.getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sqlOpen)) {
@@ -162,15 +164,35 @@ public class JournalPanel extends JPanel {
             }
         } catch (SQLException e) { e.printStackTrace(); }
 
-        // Closed trades dengan formatting P&L ke Rupiah
         closedModel.setRowCount(0);
         String sqlClosed = "SELECT id, tanggal_buka, tanggal_tutup, aset, tipe, entry_price, exit_price, lot_size, profit_loss FROM trades WHERE status = 'CLOSED'" + assetCondition + " ORDER BY id DESC";
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         try (Connection conn = DatabaseHelper.getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sqlClosed)) {
             while (rs.next()) {
+                String openDateStr = rs.getString("tanggal_buka");
+                String closeDateStr = rs.getString("tanggal_tutup");
+                String duration = "";
+                if (openDateStr != null && closeDateStr != null) {
+                    try {
+                        Date openDate = sdf.parse(openDateStr);
+                        Date closeDate = sdf.parse(closeDateStr);
+                        long diffMillis = closeDate.getTime() - openDate.getTime();
+                        long diffHours = TimeUnit.MILLISECONDS.toHours(diffMillis);
+                        long diffMinutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis) % 60;
+                        if (diffHours > 0) {
+                            duration = diffHours + " jam " + diffMinutes + " menit";
+                        } else {
+                            duration = diffMinutes + " menit";
+                        }
+                    } catch (Exception ex) {
+                        duration = "?";
+                    }
+                }
                 double pl = rs.getDouble("profit_loss");
                 String plFormatted = String.format("Rp %,.2f", pl);
+                // Urutan kolom: ID, Open Date, Close Date, Duration, Asset, Type, Entry, Exit, Lot, P&L
                 closedModel.addRow(new Object[]{
-                    rs.getInt("id"), rs.getString("tanggal_buka"), rs.getString("tanggal_tutup"),
+                    rs.getInt("id"), openDateStr, closeDateStr, duration,
                     rs.getString("aset"), rs.getString("tipe"), rs.getDouble("entry_price"),
                     rs.getDouble("exit_price"), rs.getDouble("lot_size"), plFormatted
                 });

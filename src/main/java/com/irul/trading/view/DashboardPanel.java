@@ -29,16 +29,14 @@ public class DashboardPanel extends JPanel {
     }
 
     private void initUI() {
-        // Panel statistik dengan card
         JPanel statsPanel = new JPanel(new GridLayout(2, 2, 15, 15));
         statsPanel.setOpaque(false);
         statsPanel.add(createStatCard("Win Rate", lblWinRateValue = new JLabel("-"), new Color(0, 150, 136)));
         statsPanel.add(createStatCard("Profit Factor", lblProfitFactorValue = new JLabel("-"), new Color(33, 150, 243)));
-        statsPanel.add(createStatCard("Max Drawdown", lblMaxDrawdownValue = new JLabel("-"), new Color(255, 87, 34)));
+        statsPanel.add(createStatCard("Max Drawdown (Rp)", lblMaxDrawdownValue = new JLabel("-"), new Color(255, 87, 34)));
         statsPanel.add(createStatCard("Total Trades", lblTotalTradesValue = new JLabel("-"), new Color(156, 39, 176)));
         add(statsPanel, BorderLayout.NORTH);
 
-        // Panel grafik (equity curve dan donat)
         JPanel chartsPanel = new JPanel(new GridLayout(1, 2, 15, 15));
         chartsPanel.setOpaque(false);
         equityChartPanel = new ChartPanel(null);
@@ -52,7 +50,6 @@ public class DashboardPanel extends JPanel {
         chartsPanel.add(donutChartPanel);
         add(chartsPanel, BorderLayout.CENTER);
 
-        // Tombol refresh
         JButton refreshBtn = new JButton("⟳ Refresh");
         refreshBtn.addActionListener(e -> { refreshStats(); refreshEquityChart(); refreshDonutChart(); });
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -80,7 +77,7 @@ public class DashboardPanel extends JPanel {
     private void refreshStats() {
         lblWinRateValue.setText(String.format("%.2f%%", DatabaseHelper.getWinRate()));
         lblProfitFactorValue.setText(String.format("%.2f", DatabaseHelper.getProfitFactor()));
-        lblMaxDrawdownValue.setText(String.format("$ %.2f", DatabaseHelper.getMaxDrawdown()));
+        lblMaxDrawdownValue.setText(String.format("Rp %.2f", DatabaseHelper.getMaxDrawdown()));
         lblTotalTradesValue.setText(String.valueOf(DatabaseHelper.getTotalTrades()));
     }
 
@@ -102,7 +99,7 @@ public class DashboardPanel extends JPanel {
                 }
             }
         } catch (SQLException e) { e.printStackTrace(); }
-        JFreeChart chart = ChartFactory.createTimeSeriesChart("", "Date", "Cumulative P/L", new TimeSeriesCollection(series), true, true, false);
+        JFreeChart chart = ChartFactory.createTimeSeriesChart("", "Date", "Cumulative P/L (Rp)", new TimeSeriesCollection(series), true, true, false);
         chart.setBackgroundPaint(new Color(30, 30, 35));
         chart.getPlot().setBackgroundPaint(new Color(40, 40, 45));
         equityChartPanel.setChart(chart);
